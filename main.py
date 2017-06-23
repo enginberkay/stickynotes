@@ -4,10 +4,11 @@ from gi.repository import Gtk
 
 
 class MainWindow(Gtk.Window):
-    def __init__(self):
+    def __init__(self, id):
         Gtk.Window.__init__(self, title="Sticky Notes")
         self.set_border_width(10)
         self.set_default_size(250, 150)
+        self.windowID = id
 
         # Header Bar
         header_bar = Gtk.HeaderBar()
@@ -38,10 +39,11 @@ class MainWindow(Gtk.Window):
         self.textbuffer.connect("changed", self.get_changed_text)
 
     def new(self, widget):
-        App.create_window(self)
+        App.create_window(A)
 
     def kill(self, widget):
         self.destroy()
+        App.delete_window(A, self.windowID)
 
     def get_changed_text(self, buffer):
         start_iter = buffer.get_start_iter()
@@ -49,6 +51,8 @@ class MainWindow(Gtk.Window):
         self.text = buffer.get_text(start_iter, end_iter, True)
         print(self.text)
 
+    def set_id(self):
+        self.windowID -= 1
 
     def create_textView(self):
         scrolledwindow = Gtk.ScrolledWindow()
@@ -64,24 +68,32 @@ class MainWindow(Gtk.Window):
         scrolledwindow.add(self.textview)
 
 
-class App():
+class App:
     def __init__(self):
         global myDb
         myDb = db.database()
+        self.counter = -1
         self.myWindows = []
-        self.create_first_window()
-
-    def create_first_window(self):
-        window = MainWindow()
-        window.connect("delete-event", exit)
-        window.show_all()
-        self.myWindows.append(window)
+        self.create_window()
 
     def create_window(self):
-        window = MainWindow()
+        self.counter += 1
+        window = MainWindow(self.counter)
         window.connect('delete-event', exit)
         window.show_all()
         self.myWindows.append(window)
+
+    def delete_window(self, id):
+        del self.myWindows[id]
+        self.order_by_on(id)
+        if len(self.myWindows) == 0:
+            exit(True, True)
+
+    def order_by_on(self, id):
+        length = len(self.myWindows) - 1
+        while length >= id:
+            self.myWindows[length].set_id()
+            length -= 1
 
 
 def exit(self, event):
@@ -89,5 +101,5 @@ def exit(self, event):
     Gtk.main_quit()
 
 
-App()
+A = App()
 Gtk.main()

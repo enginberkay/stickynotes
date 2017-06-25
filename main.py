@@ -1,14 +1,15 @@
 import gi, db
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
-
+from gi.repository import Gtk, Gdk
 
 class MainWindow(Gtk.Window):
-    def __init__(self, id):
+    def __init__(self, Window_ID, DB_ID, TEXT_PARAM="Write Your Note"):
         Gtk.Window.__init__(self, title="Sticky Notes")
         self.set_border_width(10)
         self.set_default_size(250, 150)
-        self.windowID = id
+        self.windowID = Window_ID
+        self.dbID = DB_ID
+        self.TEXT_PARAM = TEXT_PARAM
 
         # Header Bar
         header_bar = Gtk.HeaderBar()
@@ -30,18 +31,17 @@ class MainWindow(Gtk.Window):
         new_button.connect('clicked', self.new)
         header_bar.pack_end(new_button)
 
-
         self.grid = Gtk.Grid()
         self.add(self.grid)
 
         self.create_textView()
-
         self.textbuffer.connect("changed", self.get_changed_text)
 
     def new(self, widget):
-        App.create_window(A)
+        App.create_blank_window(A)
 
     def kill(self, widget):
+        myDb.delete(self.dbID)
         self.destroy()
         App.delete_window(A, self.windowID)
 
@@ -50,6 +50,7 @@ class MainWindow(Gtk.Window):
         end_iter = buffer.get_end_iter()
         self.text = buffer.get_text(start_iter, end_iter, True)
         print(self.text)
+        myDb.update(self.dbID, self.text)
 
     def set_id(self):
         self.windowID -= 1
@@ -62,11 +63,8 @@ class MainWindow(Gtk.Window):
 
         self.textview = Gtk.TextView()
         self.textbuffer = self.textview.get_buffer()
-        self.textbuffer.set_text("This is some text inside of a Gtk.TextView. "
-                                 + "Select text and click one of the buttons 'bold', 'italic', "
-                                 + "or 'underline' to modify the text accordingly.")
+        self.textbuffer.set_text(self.TEXT_PARAM)
         scrolledwindow.add(self.textview)
-
 
 class App:
     def __init__(self):
@@ -74,11 +72,27 @@ class App:
         myDb = db.database()
         self.counter = -1
         self.myWindows = []
-        self.create_window()
+        self.initial_window()
 
-    def create_window(self):
+    def initial_window(self):
+        rows = myDb.select_all()
+        if len(rows) == 0:
+            self.create_blank_window()
+        else:
+            self.create_exist_window(rows)
+
+    def create_exist_window(self, rows):
+        for id, content in rows:
+            self.counter += 1
+            window = MainWindow(self.counter, id, content)
+            window.connect('delete-event', exit)
+            window.show_all()
+            self.myWindows.append(window)
+
+    def create_blank_window(self):
         self.counter += 1
-        window = MainWindow(self.counter)
+        DB_ID = myDb.insert("Write Your Note")
+        window = MainWindow(self.counter, DB_ID)
         window.connect('delete-event', exit)
         window.show_all()
         self.myWindows.append(window)
@@ -86,6 +100,7 @@ class App:
     def delete_window(self, id):
         del self.myWindows[id]
         self.order_by_on(id)
+        print(len(self.myWindows))
         if len(self.myWindows) == 0:
             exit(True, True)
 
@@ -95,8 +110,8 @@ class App:
             self.myWindows[length].set_id()
             length -= 1
 
-
 def exit(self, event):
+    print("kapanis")
     myDb.close_db()
     Gtk.main_quit()
 
